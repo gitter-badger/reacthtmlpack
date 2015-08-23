@@ -6,8 +6,8 @@ import {
 
 export default class WebpackScriptEntry extends Component {
   static propTypes = {
-    entryName: PropTypes.string,
-    entryFilepath: PropTypes.oneOfType([
+    chunkName: PropTypes.string,
+    chunkFilepath: PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.arrayOf(PropTypes.string),
     ]).isRequired,
@@ -18,8 +18,8 @@ export default class WebpackScriptEntry extends Component {
 
   render () {
     const {
-      entryName,
-      entryFilepath,
+      chunkName,
+      chunkFilepath,
       configFilepath,
       outputFilepathList,
       ...restProps,

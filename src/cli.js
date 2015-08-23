@@ -46,7 +46,7 @@ export function replaceWithHtmlExt (filepath) {
 
 export function buildToDir (destDir, srcPatterns) {
   return Observable.from(srcPatterns)
-    .flatMap(srcPattern => {
+    .selectMany(srcPattern => {
       const globber = new Glob(srcPattern);
       const base = glob2base(globber);
 
@@ -70,7 +70,7 @@ export function buildToDir (destDir, srcPatterns) {
 
       return acc;
     }, {matches: [], relativePathByMatch: {}})
-    .flatMap(({matches, relativePathByMatch}) => {
+    .selectMany(({matches, relativePathByMatch}) => {
       return turnCommandInto(matches)
         .map(({filepath, markup}) => {
           const relativePath = relativePathByMatch[filepath];
@@ -81,7 +81,7 @@ export function buildToDir (destDir, srcPatterns) {
           };
         });
     })
-    .flatMap(({filepath, markup}) => {
+    .selectMany(({filepath, markup}) => {
       return writeFile(filepath, markup);
     })
     .subscribe(

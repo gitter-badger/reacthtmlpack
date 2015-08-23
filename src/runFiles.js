@@ -40,28 +40,23 @@ export function turnCommandInto (filepathList) {
 
   const webpackConfigObs = filepathObs
     .zip(
-      filepathObs.flatMap(filepath => transformFile(filepath)),
+      filepathObs.selectMany(filepath => transformFile(filepath)),
       (filepath, result) => ({filepath, ...result})
     )
     .map(fromBabelCodeToReactElement)
-    .flatMap(extractWebpackConfigFilepathList)
+    .selectMany(extractWebpackConfigFilepathList)
     .groupBy(it => it.webpackConfigFilepath)
-    .flatMap(groupedObsToWebpackConfig);
-
-  const webpackStatsObs = webpackConfigObs
-    .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
-    .first()
-    .flatMap(runWebpackCompiler)
-    .map(stats => stats.toJson());
+    .selectMany(groupedObsToWebpackConfig);
 
   return webpackConfigObs
-    .zip(
-      webpackStatsObs,
-      ({entryList}, statsJson) => ({entryList, statsJson})
-    )
-    .flatMap(entryListWithStats)
+    .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
+    .first()
+    .selectMany(runWebpackCompiler)
+    .map(stats => stats.toJson())
+    .zip(webpackConfigObs, (statsJson, {chunkList}) => ({chunkList, statsJson}))
+    .selectMany(chunkListWithStats)
     .groupBy(it => it.filepath)
-    .flatMap(groupedObsToStaticMarkup);
+    .selectMany(groupedObsToStaticMarkup);
 }
 
 export function fromBabelCodeToReactElement ({filepath, code}) {
@@ -89,14 +84,14 @@ function entryWithConfigReducer (children) {
     }
     if (isEntryType(child.type)) {
       const {
-        entryName,
-        entryFilepath,
+        chunkName,
+        chunkFilepath,
         configFilepath,
       } = child.props;
 
       acc.push({
-        entryName,
-        entryFilepath,
+        chunkName,
+        chunkFilepath,
         configFilepath,
       });
     }
@@ -110,21 +105,21 @@ export function extractWebpackConfigFilepathList ({filepath, element}) {
   const entryWithConfigList = entryWithConfigReducer(element.props.children);
 
   return Observable.from(entryWithConfigList)
-    .map(({entryName, entryFilepath, configFilepath}) => {
+    .map(({chunkName, chunkFilepath, configFilepath}) => {
       return {
         filepath,
         element,
-        entryName,
-        entryFilepath,
+        chunkName,
+        chunkFilepath,
         webpackConfigFilepath: resolvePath(toDirname(filepath), configFilepath),
       };
     });
 }
 
 function toEntryReducer(acc, item) {
-  const {entryName, entryFilepath} = item;
-  acc.entry[entryName] = entryFilepath;
-  acc.list.push(item);
+  const {chunkName, chunkFilepath} = item;
+  acc.entry[chunkName] = chunkFilepath;
+  acc.chunkList.push(item);
   return acc;
 }
 
@@ -132,12 +127,12 @@ export function groupedObsToWebpackConfig (groupedObservable) {
   // http://requirebin.com/?gist=fe2c7d8fe7083d8bcd2d
   const {key: webpackConfigFilepath} = groupedObservable;
 
-  return groupedObservable.reduce(toEntryReducer, {entry: {}, list: []})
+  return groupedObservable.reduce(toEntryReducer, {entry: {}, chunkList: []})
     .first()
-    .map(function ({entry, list}) {
+    .map(function ({entry, chunkList}) {
       return {
         webpackConfigFilepath,
-        entryList: list,
+        chunkList,
         webpackConfig: {
           ...require(webpackConfigFilepath),
           entry,
@@ -162,9 +157,9 @@ export function runWebpackCompiler (webpackConfig) {
   });
 }
 
-export function entryListWithStats ({entryList, statsJson}) {
+export function chunkListWithStats ({chunkList, statsJson}) {
   return Observable.combineLatest(
-    Observable.from(entryList),
+    Observable.from(chunkList),
     Observable.from(statsJson.children),
     (it, statsJson) => ({statsJson, ...it})
   );
@@ -176,7 +171,7 @@ function entryWithOutputMapper (children, outputFilepathByEntryName) {
       return child;
     }
     const {
-      entryName,
+      chunkName,
       children,
     } = child.props;
 
@@ -185,7 +180,7 @@ function entryWithOutputMapper (children, outputFilepathByEntryName) {
     };
 
     if (isEntryType(child.type)) {
-      const outputFilepathOrList = outputFilepathByEntryName[entryName];
+      const outputFilepathOrList = outputFilepathByEntryName[chunkName];
       extraProps.outputFilepathList = [].concat(outputFilepathOrList);
     }
 
@@ -196,9 +191,9 @@ function entryWithOutputMapper (children, outputFilepathByEntryName) {
 export function groupedObsToStaticMarkup (groupedObservable) {
   // http://requirebin.com/?gist=fe2c7d8fe7083d8bcd2d
   return groupedObservable.reduce((acc, item) => {
-    const {entryName, statsJson} = item;
+    const {chunkName, statsJson} = item;
 
-    acc.outputFilepathByEntryName[entryName] = statsJson.assetsByChunkName[entryName];
+    acc.outputFilepathByEntryName[chunkName] = statsJson.assetsByChunkName[chunkName];
     acc.filepath = item.filepath;
     acc.element = item.element;
 

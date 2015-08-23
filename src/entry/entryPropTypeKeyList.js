@@ -1,5 +1,5 @@
 export default [
-  "entryName",
-  "entryFilepath",
+  "chunkName",
+  "chunkFilepath",
   "configFilepath",
 ];
