@@ -15,8 +15,8 @@ export default (
     <body>
       <div id="react-container" />
       <WebpackScriptEntry
-        entryName="assets/client"
-        entryFilepath="./scripts/client.js"
+        chunkName="assets/client"
+        chunkFilepath="./scripts/client.js"
         configFilepath="../SimpleScript.webpackConfig.js"
       />
     </body>

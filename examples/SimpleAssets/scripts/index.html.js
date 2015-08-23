@@ -12,8 +12,8 @@ export default (
     <head>
       <title>React Google Maps | tomchentw</title>
       <WebpackStyleEntry
-        entryName="assets/client"
-        entryFilepath="./scripts/client.js"
+        chunkName="assets/client"
+        chunkFilepath="./scripts/client.js"
         configFilepath="../SimpleAssets.webpackConfig.js"
       />
       <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing" />
@@ -21,8 +21,8 @@ export default (
     <body>
       <div id="react-container" />
       <WebpackScriptEntry
-        entryName="assets/client"
-        entryFilepath="./scripts/client.js"
+        chunkName="assets/client"
+        chunkFilepath="./scripts/client.js"
         configFilepath="../SimpleAssets.webpackConfig.js"
       />
     </body>
