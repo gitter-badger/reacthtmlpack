@@ -1,0 +1,19 @@
+{
+  "name": "SimpleAssets",
+  "version": "1.0.0",
+  "description": "example of showing simple script entry point with extracted css files using reacthtmlpack",
+  "devDependencies": {
+    "babel-core": "^5.8.22",
+    "babel-loader": "^5.3.2",
+    "bootstrap": "^3.3.5",
+    "css-loader": "^0.12.0",
+    "extract-text-webpack-plugin": "^0.8.2",
+    "style-loader": "^0.12.3"
+  },
+  "dependencies": {
+    "bootstrap-sass": "^3.3.5",
+    "node-libs-browser": "^0.5.2",
+    "react": "^0.13.3",
+    "react-google-maps": "^2.0.3"
+  }
+}
