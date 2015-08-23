@@ -27,7 +27,9 @@ import {
   default as webpack,
 } from "webpack";
 
-import * as Entries from "./entry";
+import {
+  default as entryPropTypeKeyList,
+} from "./entry/entryPropTypeKeyList";
 
 const transformFile = Observable.fromNodeCallback(babel.transformFile);
 
@@ -73,11 +75,9 @@ export function fromBabelCodeToReactElement ({filepath, code}) {
 }
 
 function isEntryType (type) {
-  return Object.keys(Entries).some(function (it) {
-    const EntryClass = Entries[it];
-
-    return type === EntryClass;
-  })
+  return entryPropTypeKeyList.every(key => {
+    return type.propTypes && type.propTypes[key];
+  });
 }
 
 function entryWithConfigReducer (children) {
