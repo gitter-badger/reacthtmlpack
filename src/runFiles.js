@@ -52,6 +52,7 @@ export function turnCommandInto (filepathList) {
     .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
     .first()
     .flatMap(runWebpackCompiler)
+    .tap(stats => console.log(stats.toJson().assetsByChunkName))
     .map(stats => stats.toJson());
 
   return webpackConfigObs
@@ -185,7 +186,8 @@ function entryWithOutputMapper (children, outputFilepathByEntryName) {
     };
 
     if (isEntryType(child.type)) {
-      extraProps.outputFilepath = outputFilepathByEntryName[entryName];
+      const outputFilepathOrList = outputFilepathByEntryName[entryName];
+      extraProps.outputFilepathList = [].concat(outputFilepathOrList);
     }
 
     return React.cloneElement(child, extraProps);

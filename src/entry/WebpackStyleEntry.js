@@ -4,7 +4,7 @@ import {
   PropTypes,
 } from "react";
 
-export default class WebpackScriptEntry extends Component {
+export default class WebpackStyleEntry extends Component {
   static propTypes = {
     entryName: PropTypes.string,
     entryFilepath: PropTypes.oneOfType([
@@ -26,10 +26,10 @@ export default class WebpackScriptEntry extends Component {
     } = this.props;
 
     if (outputFilepathList) {
-      const [outputFilepath] = outputFilepathList.filter(::/\.js$/.test);
+      const [outputFilepath] = outputFilepathList.filter(::/\.css$/.test);
 
       return (
-        <script {...restProps} src={outputFilepath} />
+        <link {...restProps} href={outputFilepath} />
       );
     } else {
       return (
