@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "clean": "rm -rf lib",
-    "build": "npm run lint && npm run clean && babel --stage=1 src --out-dir lib",
+    "build": "npm run lint && npm run clean && babel src --out-dir lib",
     "lint": "eslint src",
     "test": "npm run lint"
   },
