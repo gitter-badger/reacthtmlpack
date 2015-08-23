@@ -52,7 +52,6 @@ export function turnCommandInto (filepathList) {
     .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
     .first()
     .flatMap(runWebpackCompiler)
-    .tap(stats => console.log(stats.toJson().assetsByChunkName))
     .map(stats => stats.toJson());
 
   return webpackConfigObs
