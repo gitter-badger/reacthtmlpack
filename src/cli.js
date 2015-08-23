@@ -25,7 +25,7 @@ import {
 
 import {
   turnCommandInto,
-} from "./runFiles";
+} from "./core";
 
 const writeFile = Observable.fromNodeCallback(nodeWriteFile);
 

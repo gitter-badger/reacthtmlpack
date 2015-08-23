@@ -33,7 +33,7 @@ import {
 
 const transformFile = Observable.fromNodeCallback(babel.transformFile);
 
-// export default const runFiles = new Subject();
+// export default const core = new Subject();
 
 export function turnCommandInto (filepathList) {
   const filepathObs = Observable.from(filepathList);
