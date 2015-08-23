@@ -22,7 +22,7 @@ export default class WebpackScriptEntry extends Component {
       entryFilepath,
       configFilepath,
       outputFilepath,
-      ...restProps
+      ...restProps,
     } = this.props;
 
     if (outputFilepath) {
