@@ -163,7 +163,7 @@ export function runWebpackCompiler (webpackConfig) {
 }
 
 export function entryListWithStats ({entryList, statsJson}) {
-  return Observable.zip(
+  return Observable.combineLatest(
     Observable.from(entryList),
     Observable.from(statsJson.children),
     (it, statsJson) => ({statsJson, ...it})
