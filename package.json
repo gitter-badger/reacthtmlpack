@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "description": "Using HTML templates as entry points for webpack",
   "main": "lib/index.js",
+  "bin": {
+    "reacthtmlpack": "./bin/index.js"
+  },
   "files": [
     "lib/",
     "src/",
@@ -42,5 +45,13 @@
     "eslint-plugin-react": "^3.2.0",
     "tomchentw-npm-dev": "^3.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "commander": "^2.8.1",
+    "eval-as-module": "^0.1.1",
+    "glob": "^5.0.14",
+    "glob2base": "0.0.12",
+    "react": "^0.13.3",
+    "rx": "^3.1.1",
+    "webpack": "^1.11.0"
+  }
 }
