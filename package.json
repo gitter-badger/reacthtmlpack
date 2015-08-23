@@ -1,0 +1,47 @@
+{
+  "__template__gist__": "https://gist.github.com/tomchentw/368a93bb748ad9d576f1#file-package-json",
+  "name": "reacthtmlpack",
+  "version": "0.1.0",
+  "description": "Using HTML templates as entry points for webpack",
+  "main": "lib/index.js",
+  "files": [
+    "lib/",
+    "src/",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "clean": "rm -rf lib",
+    "build": "npm run lint && npm run clean && babel --stage=1 src --out-dir lib",
+    "lint": "eslint src",
+    "test": "npm run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tomchentw/reacthtmlpack"
+  },
+  "keywords": [
+    "react",
+    "html",
+    "webpack"
+  ],
+  "author": {
+    "name": "tomchentw",
+    "email": "developer@tomchentw.com",
+    "url": "https://github.com/tomchentw"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tomchentw/reacthtmlpack/issues"
+  },
+  "homepage": "https://tomchentw.github.io/reacthtmlpack/",
+  "devDependencies": {
+    "babel": "^5.1.13",
+    "babel-core": "^5.1.13",
+    "babel-eslint": "^4.0.5",
+    "eslint": "^1.0.0",
+    "eslint-plugin-react": "^3.2.0",
+    "tomchentw-npm-dev": "^3.0.0"
+  },
+  "dependencies": {
+  }
+}
