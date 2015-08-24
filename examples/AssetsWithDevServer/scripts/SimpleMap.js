@@ -1,0 +1,103 @@
+import {default as React, addons, Component} from "react/addons";
+
+import {GoogleMap, Marker} from "react-google-maps";
+
+const {update} = addons;
+
+/*
+ * This is the modify version of:
+ * https://developers.google.com/maps/documentation/javascript/examples/event-arguments
+ *
+ * Add <script src="https://maps.googleapis.com/maps/api/js"></script> to your HTML to provide google.maps reference
+ */
+export default class SimpleMap extends Component {
+
+  state = {
+    markers: [{
+      position: {
+        lat: 25.0112183,
+        lng: 121.52067570000001,
+      },
+      key: "Taiwan",
+      defaultAnimation: 1,
+    }],
+  }
+
+  componentDidMount () {
+    setTimeout(() => {
+      var {markers} = this.state;
+      markers = update(markers, {
+        $push: [
+          {
+            position: {
+              lat: 25.99,
+              lng: 122.9,
+            },
+            defaultAnimation: 2,
+            key: Date.now(),// Add a key property for: http://fb.me/react-warning-keys
+          },
+        ],
+      });
+      this.setState({ markers });
+    }, 2000);
+  }
+
+  /*
+   * This is called when you click on the map.
+   * Go and try click now.
+   */
+  _handle_map_click = (event) => {
+    var {markers} = this.state;
+    markers = update(markers, {
+      $push: [
+        {
+          position: event.latLng,
+          defaultAnimation: 2,
+          key: Date.now(),// Add a key property for: http://fb.me/react-warning-keys
+        },
+      ],
+    });
+    this.setState({ markers });
+
+    console.log(this.refs.map.getBounds());
+  }
+
+  _handle_marker_rightclick (index, event) {
+    /*
+     * All you modify is data, and the view is driven by data.
+     * This is so called data-driven-development. (And yes, it's now in
+     * web front end and even with google maps API.)
+     */
+    var {markers} = this.state;
+    markers = update(markers, {
+      $splice: [
+        [index, 1]
+      ],
+    });
+    this.setState({ markers });
+  }
+
+  render () {
+    return (
+      <section style={{height: "100%"}}>
+        <GoogleMap containerProps={{
+            style: {
+              height: "100%",
+            },
+          }}
+          ref="map"
+          zoom={4/* Change this to see HMR */}
+          center={{lat: -25.363882, lng: 131.044922}/* Change this to see HMR */}
+          onClick={this._handle_map_click}>
+          {this.state.markers.map((marker, index) => {
+            return (
+              <Marker
+                {...marker}
+                onRightclick={this._handle_marker_rightclick.bind(this, index)} />
+            );
+          })}
+        </GoogleMap>
+      </section>
+    );
+  }
+}
