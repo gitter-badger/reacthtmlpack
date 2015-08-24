@@ -1,4 +1,12 @@
 import {
+  default as fs,
+} from "fs";
+
+import {
+  resolve as resolvePath,
+} from "path";
+
+import {
   default as chai,
 } from "chai";
 
@@ -7,8 +15,17 @@ import {
 } from "dirty-chai";
 
 import {
+  default as Rx,
+  Observable,
+} from "rx";
+
+import {
   filepath$ToBabelResult$,
 } from "../src/core";
+
+import {
+  filepath$Fixture,
+} from "./fixture/observable";
 
 chai.use(dirtyChai);
 chai.should();
@@ -21,7 +38,17 @@ describe("core", () => {
       filepath$ToBabelResult$.should.exist();
     });
 
-    xit("should transform a filepath stream into babel-result stream", () => {
+    it("should transform a filepath stream into babel-result stream", (done) => {
+      const babelResult$ = filepath$ToBabelResult$(filepath$Fixture);
+
+      babelResult$.subscribe(({filepath, code}) => {
+        const es6Filepath = resolvePath(__dirname, "./fixture/file/es6-fixture.js");
+        const es5Fixture = fs.readFileSync(resolvePath(__dirname, "./fixture/file/es5-fixture.js"), "utf8").trim();
+
+        filepath.should.equals(es6Filepath);
+        code.should.equals(es5Fixture);
+
+      }, done, done);
     });
   });
 });
