@@ -9,6 +9,13 @@ import {
   Observable,
 } from "rx";
 
+import {
+  comp,
+  map,
+  filter,
+  identity,
+} from "transducers-js";
+
 Rx.config.longStackSupport = true;
 
 // Note babel-core/index.js is NOT a ES6 module
@@ -33,32 +40,92 @@ import {
 
 const transformFile = Observable.fromNodeCallback(babel.transformFile);
 
-// export default const core = new Subject();
-
-export function turnCommandInto (filepathList) {
-  const filepathObs = Observable.from(filepathList);
-
-  const webpackConfigObs = filepathObs
+/**
+ * @public
+ */
+export function filepath$ToBabelResult$ (filepath$) {
+  return filepath$
     .zip(
-      filepathObs.selectMany(filepath => transformFile(filepath)),
-      (filepath, result) => ({filepath, ...result})
-    )
-    .map(fromBabelCodeToReactElement)
-    .selectMany(extractWebpackConfigFilepathList)
+      filepath$.selectMany(filepath => transformFile(filepath)),
+      (filepath, {code}) => ({filepath, code})
+    );
+}
+
+/**
+ * @public
+ */
+export function babelResult$ToReactElement$ (babelResult$) {
+  return babelResult$
+    .map(fromBabelCodeToReactElement);
+}
+
+/**
+ * @public
+ */
+export function reactElement$ToChunkList$ (reactElement$) {
+  return reactElement$
+    .map(extractWebpackConfigFilepathList)
+    .selectMany(identity);
+}
+
+/**
+ * @public
+ */
+export function chunkList$ToWebpackConfig$ (chunkList$) {
+  return chunkList$
     .groupBy(it => it.webpackConfigFilepath)
     .selectMany(groupedObsToWebpackConfig);
+}
 
-  return webpackConfigObs
+/**
+ * @package
+ */
+export function webpackConfig$ToWebpackCompiler (webpackConfig$) {
+  return webpackConfig$
     .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
     .first()
+    .map(webpackConfig => webpack(webpackConfig));
+}
+
+/**
+ * @package
+ */
+export function webpackCompiler$ToWebpackStats (webpackCompiler$) {
+  return webpackCompiler$
     .selectMany(runWebpackCompiler)
-    .map(stats => stats.toJson())
-    .zip(webpackConfigObs, (statsJson, {chunkList}) => ({chunkList, statsJson}))
-    .selectMany(chunkListWithStats)
-    .groupBy(it => it.filepath)
+    .selectMany(stats => Observable.fromArray(stats.toJson().children));
+}
+
+/**
+ * @public
+ */
+export function webpackConfig$ToChunkList$ (webpackConfig$) {
+  return Observable.of(webpackConfig$)
+    .map(webpackConfig$ToWebpackCompiler)
+    .map(webpackCompiler$ToWebpackStats)
+    .map(webpackStats$ => {
+      return Observable.zip(
+        webpackStats$,
+        webpackConfig$,
+        (statsJson, {chunkList}) => ({chunkList, statsJson})
+      )
+      .selectMany(chunkListWithStats);
+    })
+    .selectMany(identity);
+}
+
+/**
+ * @public
+ */
+export function chunkList$ToStaticMarkup$ (chunkList$) {
+  return chunkList$
+    .groupBy(it => it.webpackConfigFilepath)
     .selectMany(groupedObsToStaticMarkup);
 }
 
+/**
+ * @private
+ */
 export function fromBabelCodeToReactElement ({filepath, code}) {
   const ComponentModule = evaluateAsModule(code, filepath);
   const element = ComponentModule.exports;
@@ -69,13 +136,19 @@ export function fromBabelCodeToReactElement ({filepath, code}) {
   };
 }
 
-function isEntryType (type) {
+/**
+ * @private
+ */
+export function isEntryType (type) {
   return entryPropTypeKeyList.every(key => {
     return type.propTypes && type.propTypes[key];
   });
 }
 
-function entryWithConfigReducer (children) {
+/**
+ * @private
+ */
+export function entryWithConfigReducer (children) {
   const acc = [];
 
   Children.forEach(children, child => {
@@ -101,10 +174,13 @@ function entryWithConfigReducer (children) {
   return acc;
 }
 
+/**
+ * @private
+ */
 export function extractWebpackConfigFilepathList ({filepath, element}) {
   const entryWithConfigList = entryWithConfigReducer(element.props.children);
 
-  return Observable.from(entryWithConfigList)
+  return Observable.fromArray(entryWithConfigList)
     .map(({chunkName, chunkFilepath, configFilepath}) => {
       return {
         filepath,
@@ -116,13 +192,19 @@ export function extractWebpackConfigFilepathList ({filepath, element}) {
     });
 }
 
-function toEntryReducer(acc, item) {
+/**
+ * @private
+ */
+export function toEntryReducer(acc, item) {
   const {chunkName, chunkFilepath} = item;
   acc.entry[chunkName] = chunkFilepath;
   acc.chunkList.push(item);
   return acc;
 }
 
+/**
+ * @private
+ */
 export function groupedObsToWebpackConfig (groupedObservable) {
   // http://requirebin.com/?gist=fe2c7d8fe7083d8bcd2d
   const {key: webpackConfigFilepath} = groupedObservable;
@@ -141,31 +223,28 @@ export function groupedObsToWebpackConfig (groupedObservable) {
     });
 }
 
-export function runWebpackCompiler (webpackConfig) {
-  const compiler = webpack(webpackConfig);
-
-  // return Observable.fromNodeCallback(::compiler.run)();
-
-  return new Promise((resolve, reject) => {
-    compiler.run((err, stats) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(stats);
-      }
-    });
-  });
+/**
+ * @private
+ */
+export function runWebpackCompiler (compiler) {
+  return Observable.fromNodeCallback(::compiler.run)();
 }
 
+/**
+ * @private
+ */
 export function chunkListWithStats ({chunkList, statsJson}) {
-  return Observable.combineLatest(
-    Observable.from(chunkList),
-    Observable.from(statsJson.children),
+  return Observable.fromArray(chunkList)
+  .combineLatest(
+    Observable.of(statsJson),
     (it, statsJson) => ({statsJson, ...it})
   );
 }
 
-function entryWithOutputMapper (children, outputFilepathByEntryName) {
+/**
+ * @private
+ */
+export function entryWithOutputMapper (children, outputFilepathByEntryName) {
   return Children.map(children, child => {
     if (!React.isValidElement(child)) {
       return child;
@@ -188,6 +267,9 @@ function entryWithOutputMapper (children, outputFilepathByEntryName) {
   });
 }
 
+/**
+ * @private
+ */
 export function groupedObsToStaticMarkup (groupedObservable) {
   // http://requirebin.com/?gist=fe2c7d8fe7083d8bcd2d
   return groupedObservable.reduce((acc, item) => {

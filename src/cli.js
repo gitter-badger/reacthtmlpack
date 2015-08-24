@@ -24,8 +24,14 @@ import {
 } from "rx";
 
 import {
-  turnCommandInto,
+  filepath$ToBabelResult$,
+  babelResult$ToReactElement$,
+  reactElement$ToChunkList$,
+  chunkList$ToWebpackConfig$,
+  webpackConfig$ToChunkList$,
+  chunkList$ToStaticMarkup$,
 } from "./core";
+
 
 const writeFile = Observable.fromNodeCallback(nodeWriteFile);
 
@@ -45,7 +51,7 @@ export function replaceWithHtmlExt (filepath) {
 }
 
 export function buildToDir (destDir, srcPatterns) {
-  return Observable.from(srcPatterns)
+  const matchesFilepath$ = Observable.fromArray(srcPatterns)
     .selectMany(srcPattern => {
       const globber = new Glob(srcPattern);
       const base = glob2base(globber);
@@ -70,23 +76,41 @@ export function buildToDir (destDir, srcPatterns) {
 
       return acc;
     }, {matches: [], relativePathByMatch: {}})
-    .selectMany(({matches, relativePathByMatch}) => {
-      return turnCommandInto(matches)
-        .map(({filepath, markup}) => {
-          const relativePath = relativePathByMatch[filepath];
+    .first();
 
-          return {
-            filepath: resolvePath(destDir, relativePath),
-            markup,
-          };
+  return Observable.of(matchesFilepath$)
+    .map(matchesFilepath$ => 
+      matchesFilepath$
+        .selectMany(({matches}) => Observable.fromArray(matches))
+    )
+    .map(filepath$ToBabelResult$)
+    .map(babelResult$ToReactElement$)
+    .map(reactElement$ToChunkList$)
+    .map(chunkList$ToWebpackConfig$)
+    .map(webpackConfig$ToChunkList$)
+    .map(chunkList$ToStaticMarkup$)
+    .map(staticMarkup$ => {
+      return staticMarkup$
+        .combineLatest(
+          matchesFilepath$, 
+          ({filepath, markup}, {relativePathByMatch}) => {
+            const relativePath = relativePathByMatch[filepath];
+
+            return {
+              filepath: resolvePath(destDir, relativePath),
+              markup,
+            };
+          }
+        )
+        .selectMany(({filepath, markup}) => {
+          return writeFile(filepath, markup);
         });
     })
-    .selectMany(({filepath, markup}) => {
-      return writeFile(filepath, markup);
-    })
-    .subscribe(
-      ::console.log,
-      ::console.error,
-      ::console.log,
-    );
+    .subscribeOnNext(writeFileResult$ => {
+      writeFileResult$.subscribe(
+        ::console.log,
+        ::console.error,
+        () => { console.log("done!"); }
+      );
+    });
 }
