@@ -31,6 +31,18 @@ import {
 } from "transducers-js";
 
 import {
+  default as WebpackDevServer,
+} from "webpack-dev-server";
+
+import {
+  default as webpack,
+} from "webpack";
+
+import {
+  default as _,
+} from "lodash";
+
+import {
   filepath$ToBabelResult$,
   babelResult$ToReactElement$,
   reactElement$ToChunkList$,
@@ -116,6 +128,111 @@ export function watchAndBuildToDir (destDir, srcPatternList) {
             }, new Array(count))
             .takeWhile(acc => acc.every(identity))
             .map(acc => Observable.fromArray(acc));
+        })
+        .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
+    })
+    .map(chunkList$ToStaticMarkup$)
+    .map(staticMarkup$ => {
+      return staticMarkup$
+        .combineLatest(
+          matchesFilepath$, 
+          ({filepath, markup}, {relativePathByMatch}) => {
+            const relativePath = relativePathByMatch[filepath];
+
+            return {
+              filepath: resolvePath(destDir, relativePath),
+              markup,
+            };
+          }
+        )
+        .selectMany(({filepath, markup}) => {
+          return writeFile(filepath, markup);
+        });
+    })
+    .subscribeOnNext(writeFileResult$ => {
+      writeFileResult$.subscribe(
+        ::console.log,
+        ::console.error,
+        () => { console.log("done!"); }
+      );
+    });
+}
+
+/**
+ * @public
+ */
+export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternList) {
+  const devServerConfigFilepath = resolvePath(process.cwd(), relativeDevServerConfigFilepath);
+  const matchesFilepath$ = getMatchesFilepath$(srcPatternList);
+
+  return Observable.of(matchesFilepath$)
+    .map(matchesFilepath$ToFilepath$)
+    .map(filepath$ToBabelResult$)
+    .map(babelResult$ToReactElement$)
+    .map(reactElement$ToChunkList$)
+    .map(chunkList$ToWebpackConfig$)
+    .selectMany(webpackConfig$ => {
+      const devServerConfig$ = webpackConfig$
+        .filter(({webpackConfigFilepath}) => webpackConfigFilepath === devServerConfigFilepath)
+        .map(({webpackConfig: {devServer}}) => devServer)
+        .first();
+
+      return Observable.combineLatest(
+          webpackConfig$,
+          devServerConfig$,
+          (it, {host, port}) => {
+            const {webpackConfig} = it;
+            const inlineDevServerChunkList = [
+              require.resolve("webpack-dev-server/client/") + `?http://${ host }:${ port }`,
+              "webpack/hot/dev-server",
+            ];
+
+            return {
+              ...it,
+              webpackConfig: {
+                ...webpackConfig,
+                entry: _.mapValues(webpackConfig.entry, filepathList =>
+                  inlineDevServerChunkList.concat(filepathList)
+                ),
+                plugins: [
+                  ...webpackConfig.plugins,
+                  new webpack.HotModuleReplacementPlugin(),
+                ],
+              },
+            };
+          }
+        )
+        .map(it => Observable.of(it))
+        .map(webpackConfig$ToWebpackCompiler$)
+        .combineLatest(
+          webpackConfig$.count(),
+          (webpackCompiler$, count) => ({webpackCompiler$, count})
+        )
+        .selectMany(({webpackCompiler$, count}) => {
+          return Observable.of(webpackCompiler$)
+            .map(webpackCompiler$ => {
+              return Observable.combineLatest(
+                devServerConfig$,
+                webpackCompiler$,
+                (devServerConfig, webpackCompiler) => {
+                  const wDS = new WebpackDevServer(webpackCompiler, devServerConfig);
+
+                  return Observable.create(observer => {
+                    wDS.listen(devServerConfig.port, devServerConfig.host, (err) => {
+                      if (err) {
+                        observer.onError(err);
+                      }
+                    });
+
+                    webpackCompiler.plugin("done", stats => {
+                      observer.onNext(Observable.fromArray(stats.toJson().children));
+                    });
+                  });
+                }
+              ) 
+                .selectMany(identity);
+            })
+            .selectMany(identity);
         })
         .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
     })

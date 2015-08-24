@@ -50,9 +50,11 @@
     "eval-as-module": "^0.1.1",
     "glob": "^5.0.14",
     "glob2base": "0.0.12",
+    "lodash": "^3.10.1",
     "react": "^0.13.3",
     "rx": "^3.1.1",
     "transducers-js": "^0.4.174",
-    "webpack": "^1.11.0"
+    "webpack": "^1.11.0",
+    "webpack-dev-server": "^1.10.1"
   }
 }
