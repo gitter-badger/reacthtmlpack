@@ -8,7 +8,7 @@ module.exports = {
   context: __dirname,
   output: {
     path: Path.resolve(__dirname, "../../public"),
-    filename: "[name].js",
+    filename: "[name]-[chunkhash].js",
   },
   resolve: {
     alias: {
