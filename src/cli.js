@@ -24,12 +24,22 @@ import {
 } from "rx";
 
 import {
+  comp,
+  map,
+  filter,
+  identity,
+} from "transducers-js";
+
+import {
   filepath$ToBabelResult$,
   babelResult$ToReactElement$,
   reactElement$ToChunkList$,
   chunkList$ToWebpackConfig$,
+  webpackConfig$ToWebpackCompiler$,
   webpackConfig$ToChunkList$,
   chunkList$ToStaticMarkup$,
+  // @package
+  mergeWebpackStats$ToChunkList$WithWebpackConfig$,
 } from "./core";
 
 const writeFile = Observable.fromNodeCallback(nodeWriteFile);
@@ -47,6 +57,66 @@ export function buildToDir (destDir, srcPatternList) {
     .map(reactElement$ToChunkList$)
     .map(chunkList$ToWebpackConfig$)
     .map(webpackConfig$ToChunkList$)
+    .map(chunkList$ToStaticMarkup$)
+    .map(staticMarkup$ => {
+      return staticMarkup$
+        .combineLatest(
+          matchesFilepath$, 
+          ({filepath, markup}, {relativePathByMatch}) => {
+            const relativePath = relativePathByMatch[filepath];
+
+            return {
+              filepath: resolvePath(destDir, relativePath),
+              markup,
+            };
+          }
+        )
+        .selectMany(({filepath, markup}) => {
+          return writeFile(filepath, markup);
+        });
+    })
+    .subscribeOnNext(writeFileResult$ => {
+      writeFileResult$.subscribe(
+        ::console.log,
+        ::console.error,
+        () => { console.log("done!"); }
+      );
+    });
+}
+
+/**
+ * @public
+ */
+export function watchAndBuildToDir (destDir, srcPatternList) {
+  const matchesFilepath$ = getMatchesFilepath$(srcPatternList);
+
+  return Observable.of(matchesFilepath$)
+    .map(matchesFilepath$ToFilepath$)
+    .map(filepath$ToBabelResult$)
+    .map(babelResult$ToReactElement$)
+    .map(reactElement$ToChunkList$)
+    .map(chunkList$ToWebpackConfig$)
+    .selectMany(webpackConfig$ => {
+      return Observable.of(webpackConfig$)
+        .map(webpackConfig$ToWebpackCompiler$)
+        .combineLatest(
+          webpackConfig$.count(),
+          (webpackCompiler$, count) => ({webpackCompiler$, count})
+        )
+        .selectMany(({webpackCompiler$, count}) => {
+          return watchMultiCompiler$ToChildrenStats$(webpackCompiler$)
+            .scan((acc, {index, statsJson}) => {
+              acc = [...acc];
+
+              acc[index] = statsJson;
+
+              return acc;
+            }, new Array(count))
+            .takeWhile(acc => acc.every(identity))
+            .map(acc => Observable.fromArray(acc));
+        })
+        .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
+    })
     .map(chunkList$ToStaticMarkup$)
     .map(staticMarkup$ => {
       return staticMarkup$
@@ -104,6 +174,43 @@ export function srcPatternToMatchResult (srcPattern) {
 
     return globber.removeListener.bind(globber, "end", callback);
   });
+}
+
+export function watchMultiCompiler$ToChildrenStats$ (webpackCompiler$) {
+  // return Observable.create(observer => {
+  //   function callback (err, stats) {
+  //     if (err) {
+  //       observer.onError(err);
+  //     } else {
+  //       observer.onNext(stats);
+  //     }
+  //   }
+  //   const watcher = webpackCompiler.watch({}, callback);
+  //   return watcher.close.bind(watcher);
+  // });
+  // We cannot use the above code because we want every results in a sub compiler.
+  // This is an issue of implementation details of webpack
+  return webpackCompiler$
+    .selectMany(webpackCompiler => Observable.fromArray(webpackCompiler.compilers))
+    .selectMany((compiler, index) => {
+
+      return Observable.create(observer => {
+        function callback (err, stats) {
+          if (err) {
+            observer.onError(err);
+          } else {
+            observer.onNext({
+              index,
+              statsJson: stats.toJson(),
+            });
+          }
+        }
+
+        const watcher = compiler.watch({}, callback);
+
+        return watcher.close.bind(watcher);
+      });
+    });
 }
 
 /**

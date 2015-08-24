@@ -80,17 +80,18 @@ export function chunkList$ToWebpackConfig$ (chunkList$) {
 /**
  * @package
  */
-export function webpackConfig$ToWebpackCompiler (webpackConfig$) {
+export function webpackConfig$ToWebpackCompiler$ (webpackConfig$) {
   return webpackConfig$
     .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
     .first()
+    // The webpackCompiler should be an instance of MultiCompiler
     .map(webpackConfig => webpack(webpackConfig));
 }
 
 /**
  * @package
  */
-export function webpackCompiler$ToWebpackStats (webpackCompiler$) {
+export function webpackCompiler$ToWebpackStats$ (webpackCompiler$) {
   return webpackCompiler$
     .selectMany(runWebpackCompiler)
     .selectMany(stats => Observable.fromArray(stats.toJson().children));
@@ -101,16 +102,9 @@ export function webpackCompiler$ToWebpackStats (webpackCompiler$) {
  */
 export function webpackConfig$ToChunkList$ (webpackConfig$) {
   return Observable.of(webpackConfig$)
-    .map(webpackConfig$ToWebpackCompiler)
-    .map(webpackCompiler$ToWebpackStats)
-    .map(webpackStats$ => {
-      return Observable.zip(
-        webpackStats$,
-        webpackConfig$,
-        (statsJson, {chunkList}) => ({chunkList, statsJson})
-      )
-      .selectMany(chunkListWithStats);
-    })
+    .map(webpackConfig$ToWebpackCompiler$)
+    .map(webpackCompiler$ToWebpackStats$)
+    .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
     .selectMany(identity);
 }
 
@@ -228,6 +222,20 @@ export function groupedObsToWebpackConfig (groupedObservable) {
  */
 export function runWebpackCompiler (compiler) {
   return Observable.fromNodeCallback(::compiler.run)();
+}
+
+/**
+ * @package
+ */
+export function mergeWebpackStats$ToChunkList$WithWebpackConfig$ (webpackConfig$) {
+  return webpackStats$ => {
+    return Observable.zip(
+      webpackStats$,
+      webpackConfig$,
+      (statsJson, {chunkList}) => ({chunkList, statsJson})
+    )
+    .selectMany(chunkListWithStats);
+  };
 }
 
 /**
