@@ -45,10 +45,10 @@ const transformFile = Observable.fromNodeCallback(babel.transformFile);
  */
 export function filepath$ToBabelResult$ (filepath$) {
   return filepath$
-    .zip(
-      filepath$.selectMany(filepath => transformFile(filepath)),
-      (filepath, {code}) => ({filepath, code})
-    );
+    .selectMany(filepath => {
+      return transformFile(filepath)
+        .map(({code}) => ({filepath, code}));
+    });
 }
 
 /**
