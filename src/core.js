@@ -64,8 +64,7 @@ export function babelResult$ToReactElement$ (babelResult$) {
  */
 export function reactElement$ToChunkList$ (reactElement$) {
   return reactElement$
-    .map(extractWebpackConfigFilepathList)
-    .selectMany(identity);
+    .selectMany(extractWebpackConfigFilepathList);
 }
 
 /**
