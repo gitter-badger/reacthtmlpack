@@ -100,15 +100,33 @@ export function buildToDir (destDir, srcPatternList) {
  * @public
  */
 export function watchAndBuildToDir (destDir, srcPatternList) {
-  const matchesFilepath$ = getMatchesFilepath$(srcPatternList);
+  const {filepath$, relativePathByMatch$} = getMatchResult(srcPatternList);
 
-  return Observable.of(matchesFilepath$)
-    .map(matchesFilepath$ToFilepath$)
-    .map(filepath$ToBabelResult$)
-    .map(babelResult$ToReactElement$)
-    .map(reactElement$ToChunkList$)
-    .map(chunkList$ToWebpackConfig$)
+  const xf = comp(...[
+    map(chunkList$ToStaticMarkup$),
+    map(staticMarkup$ => {
+      return staticMarkup$
+        .combineLatest(relativePathByMatch$,
+          ({filepath, markup}, relativePathByMatch) => {
+            const relativePath = relativePathByMatch[filepath];
+
+            return {
+              filepath: resolvePath(destDir, relativePath),
+              markup,
+            };
+          }
+        )
+        .selectMany(({filepath, markup}) => {
+          return writeFile(filepath, markup);
+        });
+    }),
+  ]);
+
+  Observable.of(filepath$)
+    .transduce(xfFilepath$ToWebpackConfig$)
     .selectMany(webpackConfig$ => {
+      // Why selectMany? Because watch could be repeative.
+      // Instead of wrapping one value, now a series of values are emitted.
       return Observable.of(webpackConfig$)
         .map(webpackConfig$ToWebpackCompiler$)
         .combineLatest(
@@ -131,31 +149,13 @@ export function watchAndBuildToDir (destDir, srcPatternList) {
         })
         .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
     })
-    .map(chunkList$ToStaticMarkup$)
-    .map(staticMarkup$ => {
-      return staticMarkup$
-        .combineLatest(
-          matchesFilepath$, 
-          ({filepath, markup}, {relativePathByMatch}) => {
-            const relativePath = relativePathByMatch[filepath];
-
-            return {
-              filepath: resolvePath(destDir, relativePath),
-              markup,
-            };
-          }
-        )
-        .selectMany(({filepath, markup}) => {
-          return writeFile(filepath, markup);
-        });
-    })
-    .subscribeOnNext(writeFileResult$ => {
-      writeFileResult$.subscribe(
-        ::console.log,
-        ::console.error,
-        () => { console.log("done!"); }
-      );
-    });
+    .transduce(xf)
+    .concatAll()
+    .subscribe(
+      ::console.log,
+      ::console.error,
+      () => { console.log("done!"); }
+    );
 }
 
 /**
