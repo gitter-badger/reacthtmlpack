@@ -21,12 +21,14 @@ import {
 
 import {
   filepath$ToBabelResult$,
-  babelResult$ToReactElement$
+  babelResult$ToReactElement$,
+  reactElement$ToChunkList$,
 } from "../src/core";
 
 import {
   filepath$Fixture,
   babelResult$Fixture,
+  reactElement$Fixture,
 } from "./fixture/observable";
 
 import {
@@ -54,8 +56,8 @@ describe("core", () => {
           const es6Filepath = resolvePath(__dirname, "./fixture/file/es6-fixture.js");
           const es5Fixture = readFileAsContent(resolvePath(__dirname, "./fixture/file/es5-fixture.js"));
 
-          filepath.should.equals(es6Filepath);
-          code.should.equals(es5Fixture);
+          filepath.should.equal(es6Filepath);
+          code.should.equal(es5Fixture);
 
         }, done, () => {
           callback.calledOnce.should.be.true();
@@ -81,9 +83,55 @@ describe("core", () => {
 
           const es6Filepath = resolvePath(__dirname, "./fixture/file/es6-fixture.js");
 
-          filepath.should.equals(es6Filepath);
+          filepath.should.equal(es6Filepath);
           element.abc.should.be.a("function");
-          element.resolvePath.should.equals(resolvePath);
+          element.resolvePath.should.equal(resolvePath);
+
+        }, done, () => {
+          callback.calledOnce.should.be.true();
+
+          done();
+        });
+    });
+
+  });
+
+  describe("reactElement$ToChunkList$", () => {
+
+    it("should be exported", () => {
+      reactElement$ToChunkList$.should.exist();
+    });
+
+    it("should transform a ReactElement stream into a chunk stream", (done) => {
+      const callback = sinon.spy();
+      
+      reactElement$ToChunkList$(reactElement$Fixture)
+        .tapOnNext(callback)
+        .subscribe(({filepath, element, chunkName, chunkFilepath, webpackConfigFilepath}) => {
+
+          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/file/html-fixture.js");
+          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/file/configFilepath-fixture.config.js");
+
+          filepath.should.equal(expectedHtmlFilepath);
+
+          element.type.should.equal("html");
+          const head = element.props.children;
+          const title = head.props.children[0];
+          const entry = head.props.children[1];
+
+          head.type.should.equal("head");
+          title.type.should.equal("title");
+
+          entry.type.name.should.equal("TestEntry");
+          entry.props.should.eql({
+            chunkName: "chunkName-fixture",
+            chunkFilepath: "chunkFilepath-fixture.js",
+            configFilepath: "configFilepath-fixture.config.js",
+          });
+
+          chunkName.should.equal("chunkName-fixture");
+          chunkFilepath.should.equal("chunkFilepath-fixture.js");
+          webpackConfigFilepath.should.equal(expectedWebpackConfigFilepath);
 
         }, done, () => {
           callback.calledOnce.should.be.true();
