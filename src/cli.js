@@ -43,6 +43,8 @@ import {
 } from "lodash";
 
 import {
+  xfFilepath$ToWebpackConfig$,
+
   filepath$ToBabelResult$,
   babelResult$ToReactElement$,
   reactElement$ToChunkList$,
@@ -60,21 +62,16 @@ const writeFile = Observable.fromNodeCallback(nodeWriteFile);
  * @public
  */
 export function buildToDir (destDir, srcPatternList) {
-  const matchesFilepath$ = getMatchesFilepath$(srcPatternList);
+  const {filepath$, relativePathByMatch$} = getMatchResult(srcPatternList);
 
-  return Observable.of(matchesFilepath$)
-    .map(matchesFilepath$ToFilepath$)
-    .map(filepath$ToBabelResult$)
-    .map(babelResult$ToReactElement$)
-    .map(reactElement$ToChunkList$)
-    .map(chunkList$ToWebpackConfig$)
-    .map(webpackConfig$ToChunkList$)
-    .map(chunkList$ToStaticMarkup$)
-    .map(staticMarkup$ => {
+  const xf = comp(...[
+    xfFilepath$ToWebpackConfig$,
+    map(webpackConfig$ToChunkList$),
+    map(chunkList$ToStaticMarkup$),
+    map(staticMarkup$ => {
       return staticMarkup$
-        .combineLatest(
-          matchesFilepath$, 
-          ({filepath, markup}, {relativePathByMatch}) => {
+        .combineLatest(relativePathByMatch$,
+          ({filepath, markup}, relativePathByMatch) => {
             const relativePath = relativePathByMatch[filepath];
 
             return {
@@ -86,14 +83,17 @@ export function buildToDir (destDir, srcPatternList) {
         .selectMany(({filepath, markup}) => {
           return writeFile(filepath, markup);
         });
-    })
-    .subscribeOnNext(writeFileResult$ => {
-      writeFileResult$.subscribe(
-        ::console.log,
-        ::console.error,
-        () => { console.log("done!"); }
-      );
-    });
+    }),
+  ]);
+
+  Observable.of(filepath$)
+    .transduce(xf)
+    .concatAll()
+    .subscribe(
+      ::console.log,
+      ::console.error,
+      () => { console.log("done!"); }
+    );
 }
 
 /**
@@ -271,6 +271,27 @@ export function getMatchesFilepath$ (srcPatternList) {
     .selectMany(srcPatternToMatchResult)
     .reduce(matchResultToMatchesFilepathReducer, {matches: [], relativePathByMatch: {}})
     .first();
+}
+
+/**
+ * @private
+ */
+export function getMatchResult (srcPatternList) {
+  const matchResult$ = Observable.fromArray(srcPatternList)
+    .selectMany(srcPatternToMatchResult)
+    .reduce(matchResultToMatchesFilepathReducer, {matches: [], relativePathByMatch: {}})
+    .first();
+
+  const filepath$ = matchResult$
+    .selectMany(({matches}) => Observable.fromArray(matches));
+
+  const relativePathByMatch$ = matchResult$
+    .map(({relativePathByMatch}) => relativePathByMatch);
+
+  return {
+    filepath$,
+    relativePathByMatch$,
+  };
 }
 
 /**

@@ -40,6 +40,13 @@ import {
 
 const transformFile = Observable.fromNodeCallback(babel.transformFile);
 
+export const xfFilepath$ToWebpackConfig$ = comp(...[
+  map(filepath$ToBabelResult$),
+  map(babelResult$ToReactElement$),
+  map(reactElement$ToChunkList$),
+  map(chunkList$ToWebpackConfig$),
+]);
+
 /**
  * @public
  */
