@@ -15,7 +15,7 @@ if ("production" === process.env.NODE_ENV) {
     // Safe effect as webpack -p
     new webpack.optimize.UglifyJsPlugin(),
     new webpack.optimize.OccurenceOrderPlugin(),
-  ]
+  ];
 } else {
   // For webpack-dev-server and HMR!!!
   JSX_LOADER_LIST = ["react-hot", "babel"];
@@ -25,24 +25,25 @@ if ("production" === process.env.NODE_ENV) {
 }
 
 module.exports = {
+  devServer: {
+    port: 8080,
+    host: "localhost",
+    "contentBase": Path.resolve(__dirname, "../../public"),
+    hot: true,
+  },
   context: __dirname,
   output: {
     path: Path.resolve(__dirname, "../../public"),
     filename: FILENAME_FORMAT,
   },
-  resolve: {
-    alias: {
-      "react": Path.resolve(__dirname, "./node_modules/react"),
-    },
-  },
-  resolveLoader: {
-    root: Path.resolve(__dirname, "./node_modules")
-  },
   module: {
     loaders: [
-      { test: /\.css$/, loader: ExtractTextPlugin.extract("style-loader", "css-loader", {
-        publicPath: ""
-      }) },
+      {
+        test: /\.css$/,
+        loader: ExtractTextPlugin.extract("style", "css", {
+          publicPath: ""
+        }),
+      },
       {
         test: /\.js(x?)$/,
         exclude: /node_modules/,
@@ -56,10 +57,4 @@ module.exports = {
       disable: "production" !== process.env.NODE_ENV
     }),
   ].concat(PRODUCTION_PLUGINS),
-  devServer: {
-    port: 8080,
-    host: "localhost",
-    "contentBase": Path.resolve(__dirname, "../../public"),
-    hot: true,
-  },
 };

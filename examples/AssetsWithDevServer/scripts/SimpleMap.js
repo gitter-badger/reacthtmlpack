@@ -19,7 +19,7 @@ export default class SimpleMap extends Component {
         lng: 121.52067570000001,
       },
       key: "Taiwan",
-      defaultAnimation: 1,
+      defaultAnimation: 2,
     }],
   }
 
