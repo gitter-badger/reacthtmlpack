@@ -13,3 +13,10 @@ export default Observable.from([
     element: require("../file/html-fixture.js"),
   },
 ]);
+
+export const multiEntrySingleConfig$ = Observable.from([
+  {
+    filepath: resolvePath(__dirname, "../file/multi-entry-single-config-html-fixture.js"),
+    element: require("../file/multi-entry-single-config-html-fixture.js"),
+  },
+]);

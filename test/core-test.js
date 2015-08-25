@@ -28,8 +28,12 @@ import {
 import {
   filepath$Fixture,
   babelResult$Fixture,
-  reactElement$Fixture,
 } from "./fixture/observable";
+
+import {
+  default as reactElement$Fixture,
+  multiEntrySingleConfig$ as multiEntrySingleConfig$Fixture,
+} from "./fixture/observable/reactElement$";
 
 import {
   readFileAsContent,
@@ -138,6 +142,74 @@ describe("core", () => {
 
           done();
         });
+    });
+
+    it("should transform a ReactElement with multiple entries stream into a chunk stream", (done) => {
+      const callback = sinon.spy();
+      
+      const chunk$ = reactElement$ToChunkList$(multiEntrySingleConfig$Fixture)
+      
+      chunk$.subscribe(callback, done, () => {
+          callback.calledTwice.should.be.true();
+        });
+
+      chunk$.take(1)
+        .subscribe(({filepath, element, chunkName, chunkFilepath, webpackConfigFilepath}) => {
+
+          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/file/multi-entry-single-config-html-fixture.js");
+          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/file/configFilepath-fixture.config.js");
+
+          filepath.should.equal(expectedHtmlFilepath);
+
+          element.type.should.equal("html");
+          const head = element.props.children[0];
+          const title = head.props.children[0];
+          const entry = head.props.children[1];
+
+          head.type.should.equal("head");
+          title.type.should.equal("title");
+
+          entry.type.name.should.equal("TestEntry");
+          entry.props.should.eql({
+            chunkName: "chunkName-fixture",
+            chunkFilepath: "chunkFilepath-fixture.js",
+            configFilepath: "configFilepath-fixture.config.js",
+          });
+
+          chunkName.should.equal("chunkName-fixture");
+          chunkFilepath.should.equal("chunkFilepath-fixture.js");
+          webpackConfigFilepath.should.equal(expectedWebpackConfigFilepath);
+
+        }, done);
+
+      chunk$.skip(1)
+        .subscribe(({filepath, element, chunkName, chunkFilepath, webpackConfigFilepath}) => {
+
+          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/file/multi-entry-single-config-html-fixture.js");
+          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/file/configFilepath-fixture.config.js");
+
+          filepath.should.equal(expectedHtmlFilepath);
+
+          element.type.should.equal("html");
+          const head = element.props.children[0];
+          const title = head.props.children[0];
+          const entry = element.props.children[1];
+
+          head.type.should.equal("head");
+          title.type.should.equal("title");
+
+          entry.type.name.should.equal("TestEntry");
+          entry.props.should.eql({
+            chunkName: "chunkName-2-fixture",
+            chunkFilepath: "chunkFilepath-2-fixture.js",
+            configFilepath: "configFilepath-fixture.config.js",
+          });
+
+          chunkName.should.equal("chunkName-2-fixture");
+          chunkFilepath.should.equal("chunkFilepath-2-fixture.js");
+          webpackConfigFilepath.should.equal(expectedWebpackConfigFilepath);
+
+        }, done, done);
     });
 
   });
