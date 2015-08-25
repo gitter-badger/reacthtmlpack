@@ -165,13 +165,33 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
   const devServerConfigFilepath = resolvePath(process.cwd(), relativeDevServerConfigFilepath);
   const matchesFilepath$ = getMatchesFilepath$(srcPatternList);
 
-  return Observable.of(matchesFilepath$)
-    .map(matchesFilepath$ToFilepath$)
-    .map(filepath$ToBabelResult$)
-    .map(babelResult$ToReactElement$)
-    .map(reactElement$ToChunkList$)
-    .map(chunkList$ToWebpackConfig$)
+  const {filepath$, relativePathByMatch$} = getMatchResult(srcPatternList);
+
+  const xf = comp(...[
+    map(chunkList$ToStaticMarkup$),
+    map(staticMarkup$ => {
+      return staticMarkup$
+        .combineLatest(relativePathByMatch$,
+          ({filepath, markup}, relativePathByMatch) => {
+            const relativePath = relativePathByMatch[filepath];
+
+            return {
+              filepath: resolvePath(destDir, relativePath),
+              markup,
+            };
+          }
+        )
+        .selectMany(({filepath, markup}) => {
+          return writeFile(filepath, markup);
+        });
+    }),
+  ]);
+
+  Observable.of(filepath$)
+    .transduce(xfFilepath$ToWebpackConfig$)
     .selectMany(webpackConfig$ => {
+      // Why selectMany? Because devServer is watching and could be repeative.
+      // Instead of wrapping one value, now a series of values are emitted.
       const devServerConfig$ = webpackConfig$
         .filter(({webpackConfigFilepath}) => webpackConfigFilepath === devServerConfigFilepath)
         .map(({webpackConfig: {devServer}}) => devServer)
@@ -236,31 +256,13 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
         })
         .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
     })
-    .map(chunkList$ToStaticMarkup$)
-    .map(staticMarkup$ => {
-      return staticMarkup$
-        .combineLatest(
-          matchesFilepath$, 
-          ({filepath, markup}, {relativePathByMatch}) => {
-            const relativePath = relativePathByMatch[filepath];
-
-            return {
-              filepath: resolvePath(destDir, relativePath),
-              markup,
-            };
-          }
-        )
-        .selectMany(({filepath, markup}) => {
-          return writeFile(filepath, markup);
-        });
-    })
-    .subscribeOnNext(writeFileResult$ => {
-      writeFileResult$.subscribe(
-        ::console.log,
-        ::console.error,
-        () => { console.log("done!"); }
-      );
-    });
+    .transduce(xf)
+    .concatAll()
+    .subscribe(
+      ::console.log,
+      ::console.error,
+      () => { console.log("done!"); }
+    );
 }
 
 /**
