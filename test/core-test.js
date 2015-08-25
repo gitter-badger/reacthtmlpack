@@ -113,8 +113,8 @@ describe("core", () => {
         .tapOnNext(callback)
         .subscribe(({filepath, element, chunkName, chunkFilepath, webpackConfigFilepath}) => {
 
-          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/file/html-fixture.js");
-          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/file/configFilepath-fixture.config.js");
+          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/html/single-entry-single-config-fixture.html.js");
+          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/html/configFilepath-fixture.config.js");
 
           filepath.should.equal(expectedHtmlFilepath);
 
@@ -153,21 +153,28 @@ describe("core", () => {
           callback.calledTwice.should.be.true();
         });
 
+      function commonPartsForChunks (filepath, webpackConfigFilepath, element) {
+        const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/html/multi-entry-single-config-fixture.html.js");
+        const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/html/configFilepath-fixture.config.js");
+
+        filepath.should.equal(expectedHtmlFilepath);
+        webpackConfigFilepath.should.equal(expectedWebpackConfigFilepath);
+
+        element.type.should.equal("html");
+        const head = element.props.children[0];
+        const title = head.props.children[0];
+
+        head.type.should.equal("head");
+        title.type.should.equal("title");
+      }
+
       chunk$.take(1)
         .subscribe(({filepath, element, chunkName, chunkFilepath, webpackConfigFilepath}) => {
 
-          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/file/multi-entry-single-config-html-fixture.js");
-          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/file/configFilepath-fixture.config.js");
+          commonPartsForChunks(filepath, webpackConfigFilepath, element);
 
-          filepath.should.equal(expectedHtmlFilepath);
-
-          element.type.should.equal("html");
           const head = element.props.children[0];
-          const title = head.props.children[0];
           const entry = head.props.children[1];
-
-          head.type.should.equal("head");
-          title.type.should.equal("title");
 
           entry.type.name.should.equal("TestEntry");
           entry.props.should.eql({
@@ -178,25 +185,15 @@ describe("core", () => {
 
           chunkName.should.equal("chunkName-fixture");
           chunkFilepath.should.equal("chunkFilepath-fixture.js");
-          webpackConfigFilepath.should.equal(expectedWebpackConfigFilepath);
 
         }, done);
 
       chunk$.skip(1)
         .subscribe(({filepath, element, chunkName, chunkFilepath, webpackConfigFilepath}) => {
 
-          const expectedHtmlFilepath = resolvePath(__dirname, "./fixture/file/multi-entry-single-config-html-fixture.js");
-          const expectedWebpackConfigFilepath = resolvePath(__dirname, "./fixture/file/configFilepath-fixture.config.js");
+          commonPartsForChunks(filepath, webpackConfigFilepath, element);
 
-          filepath.should.equal(expectedHtmlFilepath);
-
-          element.type.should.equal("html");
-          const head = element.props.children[0];
-          const title = head.props.children[0];
           const entry = element.props.children[1];
-
-          head.type.should.equal("head");
-          title.type.should.equal("title");
 
           entry.type.name.should.equal("TestEntry");
           entry.props.should.eql({
@@ -207,7 +204,6 @@ describe("core", () => {
 
           chunkName.should.equal("chunkName-2-fixture");
           chunkFilepath.should.equal("chunkFilepath-2-fixture.js");
-          webpackConfigFilepath.should.equal(expectedWebpackConfigFilepath);
 
         }, done, done);
     });
