@@ -10,19 +10,14 @@ module.exports = {
     path: Path.resolve(__dirname, "../../public"),
     filename: "[name]-[chunkhash].js",
   },
-  resolve: {
-    alias: {
-      "react": Path.resolve(__dirname, "./node_modules/react"),
-    },
-  },
-  resolveLoader: {
-    root: Path.resolve(__dirname, "./node_modules")
-  },
   module: {
     loaders: [
-      { test: /\.css$/, loader: ExtractTextPlugin.extract("style-loader", "css-loader", {
-        publicPath: ""
-      }) },
+      {
+        test: /\.css$/,
+        loader: ExtractTextPlugin.extract("style", "css", {
+          publicPath: ""
+        }),
+      },
       {
         test: /\.js(x?)$/,
         exclude: /node_modules/,

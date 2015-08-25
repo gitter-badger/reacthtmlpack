@@ -2,6 +2,11 @@
   "name": "SimpleAssets",
   "version": "1.0.0",
   "description": "example of showing simple script entry point with extracted css files using reacthtmlpack",
+  "scripts": {
+    "clean": "rm -rf ../../public/index.html ../../public/assets ../../tmp",
+    "watch": "npm run clean && NODE_ENV=development reacthtmlpack watchAndBuildToDir ../../public ./scripts/*.html.js",
+    "dev": "npm run clean && NODE_ENV=development reacthtmlpack buildToDir ../../public ./scripts/*.html.js"
+  },
   "devDependencies": {
     "babel-core": "^5.8.22",
     "babel-loader": "^5.3.2",
