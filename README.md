@@ -105,8 +105,25 @@ module.exports = {
 ### 4 - Build up the Assets
 
 ```sh
-reacthtmlpack buildToDir public scripts/*.html.js
+cd examples/SimpleScript
+npm install
+npm run dev # reacthtmlpack buildToDir ../../public ./scripts/*.html.js
 ```
+
+
+## Examples
+
+The examples list below is sorted from simple to complex.
+
+### SimpleScript
+
+https://github.com/tomchentw/reacthtmlpack/tree/master/examples/SimpleScript
+
+* One script entry
+* Zero style entry
+* One webpack config
+* Smallest webpack.config.js
+* One "scripts" command in package.json
 
 
 ## Contributing
