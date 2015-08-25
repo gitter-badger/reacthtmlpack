@@ -163,7 +163,6 @@ export function watchAndBuildToDir (destDir, srcPatternList) {
  */
 export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternList) {
   const devServerConfigFilepath = resolvePath(process.cwd(), relativeDevServerConfigFilepath);
-  const matchesFilepath$ = getMatchesFilepath$(srcPatternList);
 
   const {filepath$, relativePathByMatch$} = getMatchResult(srcPatternList);
 
@@ -268,16 +267,6 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
 /**
  * @private
  */
-export function getMatchesFilepath$ (srcPatternList) {
-  return Observable.fromArray(srcPatternList)
-    .selectMany(srcPatternToMatchResult)
-    .reduce(matchResultToMatchesFilepathReducer, {matches: [], relativePathByMatch: {}})
-    .first();
-}
-
-/**
- * @private
- */
 export function getMatchResult (srcPatternList) {
   const matchResult$ = Observable.fromArray(srcPatternList)
     .selectMany(srcPatternToMatchResult)
@@ -318,6 +307,41 @@ export function srcPatternToMatchResult (srcPattern) {
   });
 }
 
+/**
+ * @private
+ */
+export function matchResultToMatchesFilepathReducer (acc, {base, matches}) {
+  acc.matches.push(...matches);
+  matches.forEach(match => {
+
+    const filepath = replaceWithHtmlExt(match);
+    acc.relativePathByMatch[match] = relativePathOf(base, filepath);
+  });
+
+  return acc;
+}
+
+/**
+ * @private
+ */
+export function replaceWithHtmlExt (filepath) {
+  const dirpath = extractDirname(filepath);
+
+  let basename = extractBasename(filepath);
+
+  while (true) {
+    const ext = extractExtname(basename);
+    if (ext) {
+      basename = extractBasename(basename, ext);
+    } else {
+      return resolvePath(dirpath, `${ basename }.html`);
+    }
+  }
+}
+
+/**
+ * @private
+ */
 export function watchMultiCompiler$ToChildrenStats$ (webpackCompiler$) {
   // return Observable.create(observer => {
   //   function callback (err, stats) {
@@ -353,44 +377,4 @@ export function watchMultiCompiler$ToChildrenStats$ (webpackCompiler$) {
         return watcher.close.bind(watcher);
       });
     });
-}
-
-/**
- * @private
- */
-export function replaceWithHtmlExt (filepath) {
-  const dirpath = extractDirname(filepath);
-
-  let basename = extractBasename(filepath);
-
-  while (true) {
-    const ext = extractExtname(basename);
-    if (ext) {
-      basename = extractBasename(basename, ext);
-    } else {
-      return resolvePath(dirpath, `${ basename }.html`);
-    }
-  }
-}
-
-/**
- * @private
- */
-export function matchResultToMatchesFilepathReducer (acc, {base, matches}) {
-  acc.matches.push(...matches);
-  matches.forEach(match => {
-
-    const filepath = replaceWithHtmlExt(match);
-    acc.relativePathByMatch[match] = relativePathOf(base, filepath);
-  });
-
-  return acc;
-}
-
-/**
- * @private
- */
-export function matchesFilepath$ToFilepath$ (matchesFilepath$) {
-  return matchesFilepath$
-    .selectMany(({matches}) => Observable.fromArray(matches))
 }
