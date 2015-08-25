@@ -68,22 +68,7 @@ export function buildToDir (destDir, srcPatternList) {
     xfFilepath$ToWebpackConfig$,
     map(webpackConfig$ToChunkList$),
     map(chunkList$ToStaticMarkup$),
-    map(staticMarkup$ => {
-      return staticMarkup$
-        .combineLatest(relativePathByMatch$,
-          ({filepath, markup}, relativePathByMatch) => {
-            const relativePath = relativePathByMatch[filepath];
-
-            return {
-              filepath: resolvePath(destDir, relativePath),
-              markup,
-            };
-          }
-        )
-        .selectMany(({filepath, markup}) => {
-          return writeFile(filepath, markup);
-        });
-    }),
+    map(createWriteStaticMarkup$ToDestDir(relativePathByMatch$, destDir)),
   ]);
 
   Observable.of(filepath$)
@@ -104,22 +89,7 @@ export function watchAndBuildToDir (destDir, srcPatternList) {
 
   const xf = comp(...[
     map(chunkList$ToStaticMarkup$),
-    map(staticMarkup$ => {
-      return staticMarkup$
-        .combineLatest(relativePathByMatch$,
-          ({filepath, markup}, relativePathByMatch) => {
-            const relativePath = relativePathByMatch[filepath];
-
-            return {
-              filepath: resolvePath(destDir, relativePath),
-              markup,
-            };
-          }
-        )
-        .selectMany(({filepath, markup}) => {
-          return writeFile(filepath, markup);
-        });
-    }),
+    map(createWriteStaticMarkup$ToDestDir(relativePathByMatch$, destDir)),
   ]);
 
   Observable.of(filepath$)
@@ -168,22 +138,7 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
 
   const xf = comp(...[
     map(chunkList$ToStaticMarkup$),
-    map(staticMarkup$ => {
-      return staticMarkup$
-        .combineLatest(relativePathByMatch$,
-          ({filepath, markup}, relativePathByMatch) => {
-            const relativePath = relativePathByMatch[filepath];
-
-            return {
-              filepath: resolvePath(destDir, relativePath),
-              markup,
-            };
-          }
-        )
-        .selectMany(({filepath, markup}) => {
-          return writeFile(filepath, markup);
-        });
-    }),
+    map(createWriteStaticMarkup$ToDestDir(relativePathByMatch$, destDir)),
   ]);
 
   Observable.of(filepath$)
@@ -337,6 +292,28 @@ export function replaceWithHtmlExt (filepath) {
       return resolvePath(dirpath, `${ basename }.html`);
     }
   }
+}
+
+/**
+ * @private
+ */
+export function createWriteStaticMarkup$ToDestDir (relativePathByMatch$, destDir) {
+  return staticMarkup$ => {
+    return staticMarkup$
+      .combineLatest(relativePathByMatch$,
+        ({filepath, markup}, relativePathByMatch) => {
+          const relativePath = relativePathByMatch[filepath];
+
+          return {
+            filepath: resolvePath(destDir, relativePath),
+            markup,
+          };
+        }
+      )
+      .selectMany(({filepath, markup}) => {
+        return writeFile(filepath, markup);
+      });
+  };
 }
 
 /**
