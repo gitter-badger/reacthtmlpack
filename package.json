@@ -15,7 +15,7 @@
   "scripts": {
     "clean": "rm -rf lib",
     "build": "npm run lint && npm run clean && babel src --out-dir lib",
-    "lint": "eslint src",
+    "lint": "eslint bin src test",
     "test": "npm run lint && mocha --compilers js:babel/register"
   },
   "repository": {
