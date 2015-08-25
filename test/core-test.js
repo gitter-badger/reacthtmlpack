@@ -7,6 +7,10 @@ import {
 } from "path";
 
 import {
+  default as sinon,
+} from "sinon";
+
+import {
   default as chai,
 } from "chai";
 
@@ -39,16 +43,23 @@ describe("core", () => {
     });
 
     it("should transform a filepath stream into babel-result stream", (done) => {
-      const babelResult$ = filepath$ToBabelResult$(filepath$Fixture);
+      const callback = sinon.spy();
+      
+      filepath$ToBabelResult$(filepath$Fixture)
+        .tapOnNext(callback)
+        .subscribe(({filepath, code}) => {
 
-      babelResult$.subscribe(({filepath, code}) => {
-        const es6Filepath = resolvePath(__dirname, "./fixture/file/es6-fixture.js");
-        const es5Fixture = fs.readFileSync(resolvePath(__dirname, "./fixture/file/es5-fixture.js"), "utf8").trim();
+          const es6Filepath = resolvePath(__dirname, "./fixture/file/es6-fixture.js");
+          const es5Fixture = fs.readFileSync(resolvePath(__dirname, "./fixture/file/es5-fixture.js"), "utf8").trim();
 
-        filepath.should.equals(es6Filepath);
-        code.should.equals(es5Fixture);
+          filepath.should.equals(es6Filepath);
+          code.should.equals(es5Fixture);
 
-      }, done, done);
+        }, done, () => {
+          callback.calledOnce.should.be.true();
+
+          done();
+        });
     });
   });
 });
