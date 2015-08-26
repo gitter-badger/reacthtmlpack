@@ -6,7 +6,7 @@ import {
 
 export default class WebpackScriptEntry extends Component {
   static propTypes = {
-    chunkName: PropTypes.string,
+    chunkName: PropTypes.string.isRequired,
     chunkFilepath: PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.arrayOf(PropTypes.string),

@@ -127,11 +127,25 @@ export function chunkList$ToStaticMarkup$ (chunkList$) {
 }
 
 /**
+ * @package
+ */
+export function evaluateAsES2015Module (code, filepath) {
+  const cjsModule = evaluateAsModule(code, filepath);
+  if (cjsModule.exports && cjsModule.__esModule) {
+    return cjsModule.exports;
+  } else {
+    return {
+      "default": cjsModule.exports,
+    };
+  };
+}
+
+/**
  * @private
  */
 export function fromBabelCodeToReactElement ({filepath, code}) {
-  const ComponentModule = evaluateAsModule(code, filepath);
-  const element = ComponentModule.exports;
+  const ComponentModule = evaluateAsES2015Module(code, filepath);
+  const element = ComponentModule.default;
 
   return {
     filepath,

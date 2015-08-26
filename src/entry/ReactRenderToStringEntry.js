@@ -4,8 +4,13 @@ import {
   PropTypes,
 } from "react";
 
-export default class WebpackStyleEntry extends Component {
+import {
+  evaluateAsES2015Module,
+} from "../core";
+
+export default class ReactRenderToStringEntry extends Component {
   static propTypes = {
+    tagName: PropTypes.string.isRequired,
     chunkName: PropTypes.string.isRequired,
     chunkFilepath: PropTypes.oneOfType([
       PropTypes.string,
@@ -21,6 +26,7 @@ export default class WebpackStyleEntry extends Component {
 
   render () {
     const {
+      tagName,
       chunkName,
       chunkFilepath,
       configFilepath,
@@ -29,13 +35,19 @@ export default class WebpackStyleEntry extends Component {
     } = this.props;
 
     if (outputAssetList) {
-      const [outputPublicFilepath] = outputAssetList
-        .map(({publicFilepath}) => publicFilepath)
-        .filter(::/\.css$/.test);
+      const [{rawAsset}] = outputAssetList
+        .filter(({publicFilepath}) => /\.js$/.test(publicFilepath));
 
-      return (
-        <link {...restProps} href={outputPublicFilepath} />
-      );
+      const ComponentModule = evaluateAsES2015Module(rawAsset.source());
+
+      const markup = {
+        __html: React.renderToString(<ComponentModule.default />),
+      };
+
+      return React.createElement(tagName, {
+        ...restProps,
+        dangerouslySetInnerHTML: markup,
+      });
     } else {
       return (
         <noscript />
