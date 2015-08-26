@@ -86,8 +86,8 @@ export default class SimpleMap extends Component {
             },
           }}
           ref="map"
-          defaultZoom={3}
-          defaultCenter={{lat: -25.363882, lng: 131.044922}}
+          zoom={5/* Change this to see HMR */}
+          center={{lat: 25.0112183, lng: 121.52067570000001}/* Change this to see HMR */}
           onClick={this._handle_map_click}>
           {this.state.markers.map((marker, index) => {
             return (

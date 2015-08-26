@@ -1,7 +1,5 @@
 import {default as React} from "react";
 
-import {default as SimpleMap} from "./SimpleMap";
+import {default as RootEntry} from "./RootEntry";
 
-// require("../styles/index.scss");
-
-React.render(<SimpleMap />, document.getElementById("react-container"));
+React.render(<RootEntry />, document.getElementById("react-container"));

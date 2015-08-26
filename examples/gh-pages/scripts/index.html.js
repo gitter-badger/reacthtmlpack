@@ -3,21 +3,34 @@ import {
 } from "react";
 
 import {
-  WebpackScriptEntry
+  WebpackScriptEntry,
+  WebpackStyleEntry,
+  ReactRenderToStringEntry,
 } from "../../../lib/entry";
 
 export default (
   <html>
     <head>
       <title>React Google Maps | tomchentw</title>
+      <WebpackStyleEntry
+        chunkName="assets/client"
+        chunkFilepath="./scripts/client.js"
+        configFilepath="../Client.webpackConfig.js"
+      />
       <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing" />
     </head>
     <body>
-      <div id="react-container" />
+      <ReactRenderToStringEntry
+        id="react-container"
+        tagName="div"
+        chunkName="tmp/server"
+        chunkFilepath="./scripts/server.js"
+        configFilepath="../Server.webpackConfig.js"
+      />
       <WebpackScriptEntry
-        entryName="assets/client"
-        entryFilepath="./scripts/client.js"
-        configFilepath="../testconfig.js"
+        chunkName="assets/client"
+        chunkFilepath="./scripts/client.js"
+        configFilepath="../Client.webpackConfig.js"
       />
     </body>
   </html>
