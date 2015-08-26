@@ -33,7 +33,7 @@ export default class WebpackStyleEntry extends Component {
         .filter(::/\.css$/.test);
 
       return (
-        <link {...restProps} href={outputPublicFilepath} />
+        <link {...restProps} rel="stylesheet" href={outputPublicFilepath} />
       );
     } else {
       return (

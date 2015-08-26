@@ -146,10 +146,12 @@ export function evaluateAsES2015Module (code, filepath) {
 export function fromBabelCodeToReactElement ({filepath, code}) {
   const ComponentModule = evaluateAsES2015Module(code, filepath);
   const element = ComponentModule.default;
+  const doctypeHTML = ComponentModule.doctypeHTML || "<!DOCTYPE html>";
 
   return {
     filepath,
     element,
+    doctypeHTML,
   };
 }
 
@@ -194,7 +196,7 @@ export function entryWithConfigReducer (children) {
 /**
  * @private
  */
-export function extractWebpackConfigFilepathList ({filepath, element}) {
+export function extractWebpackConfigFilepathList ({filepath, element, doctypeHTML}) {
   const entryWithConfigList = entryWithConfigReducer(element.props.children);
 
   return Observable.fromArray(entryWithConfigList)
@@ -202,6 +204,7 @@ export function extractWebpackConfigFilepathList ({filepath, element}) {
       return {
         filepath,
         element,
+        doctypeHTML,
         chunkName,
         chunkFilepath,
         webpackConfigFilepath: resolvePath(toDirname(filepath), configFilepath),
@@ -320,16 +323,18 @@ export function groupedObsToStaticMarkup (groupedObservable) {
     acc.outputAssetListByChunkName[chunkName] = outputAssetList;
     acc.filepath = item.filepath;
     acc.element = item.element;
+    acc.doctypeHTML = item.doctypeHTML;
 
     return acc;
   }, {outputAssetListByChunkName: {}})
     .first()
-    .map(({outputAssetListByChunkName, filepath, element}) => {
+    .map(({outputAssetListByChunkName, filepath, element, doctypeHTML}) => {
       const clonedElement = React.cloneElement(element, {
         children: entryWithOutputMapper(element.props.children, outputAssetListByChunkName),
       });
 
-      const markup = React.renderToStaticMarkup(clonedElement);
+      const reactHtmlMarkup = React.renderToStaticMarkup(clonedElement);
+      const markup = `${ doctypeHTML }${ reactHtmlMarkup }`;
 
       return {
         filepath,
