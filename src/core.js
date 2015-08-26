@@ -100,7 +100,11 @@ export function webpackConfig$ToWebpackCompiler$ (webpackConfig$) {
 export function webpackCompiler$ToWebpackStats$ (webpackCompiler$) {
   return webpackCompiler$
     .selectMany(runWebpackCompiler)
-    .selectMany(stats => Observable.fromArray(stats.toJson().children));
+    .selectMany(stats =>
+      // See MultiCompiler - MultiStats
+      Observable.fromArray(stats.stats)
+        .map(stats => ({stats, statsJson: stats.toJson()}))
+    );
 }
 
 /**
@@ -110,8 +114,7 @@ export function webpackConfig$ToChunkList$ (webpackConfig$) {
   return Observable.of(webpackConfig$)
     .map(webpackConfig$ToWebpackCompiler$)
     .map(webpackCompiler$ToWebpackStats$)
-    .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
-    .selectMany(identity);
+    .selectMany(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$));
 }
 
 /**
@@ -238,7 +241,7 @@ export function mergeWebpackStats$ToChunkList$WithWebpackConfig$ (webpackConfig$
     return Observable.zip(
       webpackStats$,
       webpackConfig$,
-      (statsJson, {chunkList}) => ({chunkList, statsJson})
+      ({stats, statsJson}, {chunkList}) => ({chunkList, stats, statsJson})
     )
     .selectMany(chunkListWithStats);
   };
@@ -247,18 +250,28 @@ export function mergeWebpackStats$ToChunkList$WithWebpackConfig$ (webpackConfig$
 /**
  * @private
  */
-export function chunkListWithStats ({chunkList, statsJson}) {
+export function chunkListWithStats ({chunkList, stats, statsJson}) {
   return Observable.fromArray(chunkList)
-  .combineLatest(
-    Observable.of(statsJson),
-    (it, statsJson) => ({statsJson, ...it})
-  );
+    .map((it) => {
+      const outputAssetList = [].concat(statsJson.assetsByChunkName[it.chunkName])
+        .map(assetName => {
+          return {
+            rawAsset: stats.compilation.assets[assetName],
+            publicFilepath: `${ statsJson.publicPath }${ assetName }`,
+          };
+        });
+
+      return {
+        ...it,
+        outputAssetList,
+      };
+    });
 }
 
 /**
  * @private
  */
-export function entryWithOutputMapper (children, outputFilepathByEntryName) {
+export function entryWithOutputMapper (children, outputAssetListByChunkName) {
   return Children.map(children, child => {
     if (!React.isValidElement(child)) {
       return child;
@@ -269,12 +282,11 @@ export function entryWithOutputMapper (children, outputFilepathByEntryName) {
     } = child.props;
 
     const extraProps = {
-      children: entryWithOutputMapper(children, outputFilepathByEntryName),
+      children: entryWithOutputMapper(children, outputAssetListByChunkName),
     };
 
     if (isEntryType(child.type)) {
-      const outputFilepathOrList = outputFilepathByEntryName[chunkName];
-      extraProps.outputFilepathList = [].concat(outputFilepathOrList);
+      extraProps.outputAssetList = outputAssetListByChunkName[chunkName];
     }
 
     return React.cloneElement(child, extraProps);
@@ -287,18 +299,19 @@ export function entryWithOutputMapper (children, outputFilepathByEntryName) {
 export function groupedObsToStaticMarkup (groupedObservable) {
   // http://requirebin.com/?gist=fe2c7d8fe7083d8bcd2d
   return groupedObservable.reduce((acc, item) => {
-    const {chunkName, statsJson} = item;
+    const {chunkName, outputAssetList} = item;
 
-    acc.outputFilepathByEntryName[chunkName] = statsJson.assetsByChunkName[chunkName];
+
+    acc.outputAssetListByChunkName[chunkName] = outputAssetList;
     acc.filepath = item.filepath;
     acc.element = item.element;
 
     return acc;
-  }, {outputFilepathByEntryName: {}})
+  }, {outputAssetListByChunkName: {}})
     .first()
-    .map(({outputFilepathByEntryName, filepath, element}) => {
+    .map(({outputAssetListByChunkName, filepath, element}) => {
       const clonedElement = React.cloneElement(element, {
-        children: entryWithOutputMapper(element.props.children, outputFilepathByEntryName),
+        children: entryWithOutputMapper(element.props.children, outputAssetListByChunkName),
       });
 
       const markup = React.renderToStaticMarkup(clonedElement);

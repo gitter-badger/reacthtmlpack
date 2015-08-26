@@ -13,7 +13,10 @@ export default class WebpackScriptEntry extends Component {
     ]).isRequired,
     configFilepath: PropTypes.string.isRequired,
     // Generated later.
-    outputFilepathList: PropTypes.arrayOf(PropTypes.string),
+    outputAssetList: PropTypes.arrayOf(PropTypes.shape({
+      rawAsset: PropTypes.object.isRequired,
+      publicFilepath: PropTypes.string.isRequired,
+    })),
   }
 
   render () {
@@ -21,15 +24,17 @@ export default class WebpackScriptEntry extends Component {
       chunkName,
       chunkFilepath,
       configFilepath,
-      outputFilepathList,
+      outputAssetList,
       ...restProps,
     } = this.props;
 
-    if (outputFilepathList) {
-      const [outputFilepath] = outputFilepathList.filter(::/\.js$/.test);
+    if (outputAssetList) {
+      const [outputPublicFilepath] = outputAssetList
+        .map(({publicFilepath}) => publicFilepath)
+        .filter(::/\.js$/.test);
 
       return (
-        <script {...restProps} src={outputFilepath} />
+        <script {...restProps} src={outputPublicFilepath} />
       );
     } else {
       return (
