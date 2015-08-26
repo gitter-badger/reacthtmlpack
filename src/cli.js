@@ -198,8 +198,13 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
                       }
                     });
 
-                    webpackCompiler.plugin("done", stats => {
-                      observer.onNext(Observable.fromArray(stats.toJson().children));
+                    webpackCompiler.plugin("done", multiStats => {
+                      multiStats.stats.forEach(stats => {
+                        observer.onNext(Observable.of({
+                          stats,
+                          statsJson: stats.toJson(),
+                        }));
+                      });
                     });
                   });
                 }

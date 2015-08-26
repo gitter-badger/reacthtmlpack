@@ -315,7 +315,6 @@ export function groupedObsToStaticMarkup (groupedObservable) {
   return groupedObservable.reduce((acc, item) => {
     const {chunkName, outputAssetList} = item;
 
-
     acc.outputAssetListByChunkName[chunkName] = outputAssetList;
     acc.filepath = item.filepath;
     acc.element = item.element;
