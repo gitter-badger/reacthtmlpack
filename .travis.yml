@@ -5,7 +5,7 @@ node_js:
 script:
   - ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --compilers js:babel/register
 after_script:
-  - if [[ `node --version` == *v0.12* ]]; then cat ./build/coverage/lcov.info | ./node_modules/.bin/codeclimate-test-reporter; fi
+  - if [[ `node --version` == *v0.12* ]]; then cat ./coverage/lcov.info | ./node_modules/.bin/codeclimate-test-reporter; fi
 env:
   global:
     secure: bFPzpmqG5W1/2Ba/rsPaugiXW+czeStOmdegRJmkR2TuTDZq4x/EBBDj19qKXGHaIhp8+PM6bpHJuFdHMjd6fvTI7z/JkeXAQwlu3QYYmko5G60pcSegWmEa6H77YIkeqwuf3w5Nbeg7GZeUeWIEPPdIv/b7AHURXxhl8OJJEqHPZUxinGJQH0arZ2sHgkJ5UVxHdx0L3ZZkt5PS5YZ7G/nmrbagXuwRB6xjr+OhU4PXr3ndCKZ3WfDCh08xZGAfvdvu/W4F2ayHvbui7Dw16Ys9ecoM8lLBlSCrQzl/JSjUR8fg6TmWkhjuBB7BMy2c3dc5r2/Ka32Yeshn86LkGgz0KjNifPQkfXu4kHFybFmzOo2PcSLbXgTMk5G3DqtO3utGLzs+D7f1EWw2LSs44dW+h0NH5l8Yo9YAzekx1biVu/sEPC3aVCa8Nw3SpKFEHpg2Xrip4lXmZMg9fgakZiI6D0Vfro6s96m/A0/Wfqe3mu7nm2NEJGwJ0OH6/cX/XvDOo/yTmlUBXBzsSBNAE6xX5AMfuMj6AQpAvR9SDcuvXblxUvf5yUQXwMPeEP1DUSgyzsTlgQtfh08JTZe8CUTz9baIisFFrTEdmgmxGOCy/50yAVnnY95cFPKpWH8k5Z4zf1/Fq3Mm/hjd/FKaUB2Xyuk3vLdhbHfYf5GugrQ=
