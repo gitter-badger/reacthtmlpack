@@ -107,10 +107,11 @@ export function watchAndBuildToDir (destDir, srcPatternList) {
           return Observable.of(webpackCompiler$)
             .map(watchMultiCompiler$ToChildrenStats$)
             .selectMany(identity)
-            .scan((acc, {index, statsJson}) => {
+            .scan((acc, it) => {
               acc = [...acc];
+              const {index, ...rest} = it;
 
-              acc[index] = statsJson;
+              acc[index] = rest;
 
               return acc;
             }, new Array(count))
@@ -293,6 +294,7 @@ export function watchMultiCompiler$ToChildrenStats$ (webpackCompiler$) {
           } else {
             observer.onNext({
               index,
+              stats,
               statsJson: stats.toJson(),
             });
           }
