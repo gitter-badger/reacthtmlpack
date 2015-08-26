@@ -14,7 +14,6 @@ export default class WebpackScriptEntry extends Component {
     configFilepath: PropTypes.string.isRequired,
     // Generated later.
     outputAssetList: PropTypes.arrayOf(PropTypes.shape({
-      rawAsset: PropTypes.object.isRequired,
       publicFilepath: PropTypes.string.isRequired,
     })),
   }

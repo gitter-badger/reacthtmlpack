@@ -146,37 +146,8 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
     .selectMany(webpackConfig$ => {
       // Why selectMany? Because devServer is watching and could be repeative.
       // Instead of wrapping one value, now a series of values are emitted.
-      const devServerConfig$ = webpackConfig$
-        .filter(({webpackConfigFilepath}) => webpackConfigFilepath === devServerConfigFilepath)
-        .map(({webpackConfig: {devServer}}) => devServer)
-        .first();
-
-      return Observable.combineLatest(
-          webpackConfig$,
-          devServerConfig$,
-          (it, {host, port}) => {
-            const {webpackConfig} = it;
-            const inlineDevServerChunkList = [
-              require.resolve("webpack-dev-server/client/") + `?http://${ host }:${ port }`,
-              "webpack/hot/dev-server",
-            ];
-
-            return {
-              ...it,
-              webpackConfig: {
-                ...webpackConfig,
-                entry: _.mapValues(webpackConfig.entry, filepathList =>
-                  inlineDevServerChunkList.concat(filepathList)
-                ),
-                plugins: [
-                  ...webpackConfig.plugins,
-                  new webpack.HotModuleReplacementPlugin(),
-                ],
-              },
-            };
-          }
-        )
-        .map(it => Observable.of(it))
+      return Observable.of(webpackConfig$)
+        .map(addDevServerToEntryMapperCreator(devServerConfigFilepath))
         .map(webpackConfig$ToWebpackCompiler$)
         .combineLatest(
           webpackConfig$.count(),
@@ -184,34 +155,7 @@ export function devServer (relativeDevServerConfigFilepath, destDir, srcPatternL
         )
         .selectMany(({webpackCompiler$, count}) => {
           return Observable.of(webpackCompiler$)
-            .map(webpackCompiler$ => {
-              return Observable.combineLatest(
-                devServerConfig$,
-                webpackCompiler$,
-                (devServerConfig, webpackCompiler) => {
-                  const wDS = new WebpackDevServer(webpackCompiler, devServerConfig);
-
-                  return Observable.create(observer => {
-                    wDS.listen(devServerConfig.port, devServerConfig.host, (err) => {
-                      if (err) {
-                        observer.onError(err);
-                      }
-                    });
-
-                    webpackCompiler.plugin("done", multiStats => {
-                      multiStats.stats.forEach(stats => {
-                        observer.onNext(Observable.of({
-                          stats,
-                          statsJson: stats.toJson(),
-                        }));
-                      });
-                    });
-                  });
-                }
-              ) 
-                .selectMany(identity);
-            })
-            .selectMany(identity);
+            .selectMany(startDevServerWithMultiCompiler$ToChildrenStats$MapperCreator(devServerConfigFilepath));
         })
         .map(mergeWebpackStats$ToChunkList$WithWebpackConfig$(webpackConfig$))
     })
@@ -359,4 +303,72 @@ export function watchMultiCompiler$ToChildrenStats$ (webpackCompiler$) {
         return watcher.close.bind(watcher);
       });
     });
+}
+
+/**
+ * @private
+ */
+export function addDevServerToEntryMapperCreator (devServerConfigFilepath) {
+  return (webpackConfig$) => {
+    return webpackConfig$
+      .map(it => {
+        if (it.webpackConfigFilepath === devServerConfigFilepath) {
+          const {webpackConfig} = it;
+          const {devServer} = webpackConfig;
+
+          const inlineDevServerChunkList = [
+            require.resolve("webpack-dev-server/client/") + `?http://${ devServer.host }:${ devServer.port }`,
+            "webpack/hot/dev-server",
+          ];
+
+          return {
+            ...it,
+            webpackConfig: {
+              ...webpackConfig,
+              reacthtmlpackDevServer: true,
+              entry: _.mapValues(webpackConfig.entry, filepathList =>
+                inlineDevServerChunkList.concat(filepathList)
+              ),
+              plugins: [
+                ...webpackConfig.plugins,
+                new webpack.HotModuleReplacementPlugin(),
+              ],
+            },
+          };
+        } else {
+          return it;
+        }
+      });
+  };
+}
+
+/**
+ * @private
+ */
+export function startDevServerWithMultiCompiler$ToChildrenStats$MapperCreator(devServerConfigFilepath) {
+  return (webpackCompiler$) => {
+    return webpackCompiler$
+      .selectMany(webpackCompiler => {
+        const [devServer] = webpackCompiler
+          .compilers
+          .filter(compiler => compiler.options.reacthtmlpackDevServer)
+          .map(compiler => compiler.options.devServer);
+        const wDS = new WebpackDevServer(webpackCompiler, devServer);
+
+        return Observable.create(observer => {
+          wDS.listen(devServer.port, devServer.host, (err) => {
+            if (err) {
+              observer.onError(err);
+            }
+          });
+
+          webpackCompiler.plugin("done", multiStats => {
+            observer.onNext(
+              Observable.fromArray(multiStats.stats)
+                .map(stats => ({stats, statsJson: stats.toJson()}))
+            );
+          });
+        });
+      });
+  };
 }

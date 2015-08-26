@@ -122,7 +122,7 @@ export function webpackConfig$ToChunkList$ (webpackConfig$) {
  */
 export function chunkList$ToStaticMarkup$ (chunkList$) {
   return chunkList$
-    .groupBy(it => it.webpackConfigFilepath)
+    .groupBy(it => it.filepath)
     .selectMany(groupedObsToStaticMarkup);
 }
 
@@ -214,8 +214,10 @@ export function extractWebpackConfigFilepathList ({filepath, element}) {
  */
 export function toEntryReducer(acc, item) {
   const {chunkName, chunkFilepath} = item;
-  acc.entry[chunkName] = chunkFilepath;
-  acc.chunkList.push(item);
+  if (!acc.entry.hasOwnProperty(chunkName)) {
+    acc.entry[chunkName] = chunkFilepath;
+    acc.chunkList.push(item);
+  }
   return acc;
 }
 
