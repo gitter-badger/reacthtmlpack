@@ -88,8 +88,31 @@ export function chunkList$ToWebpackConfig$ (chunkList$) {
  */
 export function webpackConfig$ToWebpackCompiler$ (webpackConfig$) {
   return webpackConfig$
-    .reduce((acc, {webpackConfig}) => acc.concat(webpackConfig), [])
+    .reduce((acc, {webpackConfig}) => {
+      // Your Client config should always be first
+      if (webpackConfig.reacthtmlpackDevServer) {
+        return [webpackConfig].concat(acc);
+      } else {
+        return acc.concat(webpackConfig);
+      }
+    }, [])
     .first()
+    .tap(webpackConfig => {
+      const notMultipleConfig = 2 > webpackConfig.length;
+      if (notMultipleConfig) {
+        return;
+      }
+      const [{reacthtmlpackDevServer, output: {path: outputPath}}] = webpackConfig;
+      const notInDevServerMode = !reacthtmlpackDevServer;
+      if (notInDevServerMode) {
+        return;
+      }
+      // In devServer command, you have to keep all output.path the same.
+      const theyDontHaveTheSameOutputPath = webpackConfig.some(it => it.output.path !== outputPath);
+      if (theyDontHaveTheSameOutputPath) {
+        throw new Error("Make all your output.path the same in all of your webpack.config.js");
+      }
+    })
     // The webpackCompiler should be an instance of MultiCompiler
     .map(webpackConfig => webpack(webpackConfig));
 }
