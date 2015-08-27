@@ -1,4 +1,6 @@
 # reacthtmlpack [![Travis CI][travis-image]][travis-url] [![Quality][codeclimate-image]][codeclimate-url] [![Coverage][codeclimate-coverage-image]][codeclimate-coverage-url] [![Dependencies][gemnasium-image]][gemnasium-url] [![Gitter][gitter-image]][gitter-url]
+
+[![Join the chat at https://gitter.im/tomchentw/reacthtmlpack](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/tomchentw/reacthtmlpack?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 > Using HTML templates as entry points for webpack
 
 [![Version][npm-image]][npm-url]
